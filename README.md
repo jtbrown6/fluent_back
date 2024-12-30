@@ -1,7 +1,7 @@
 # Writing in Spanish App
 
 ## Purpose
-This is a simple python based applicaton which leverages the OpenAI API to perform language learning support when writing and translating spanish to english and vice versa. It uses the gpt-3.5-turbo model which keeps costs down.
+This is a simple python based applicaton which leverages the OpenAI API to perform language learning support when writing and translating spanish to english and vice versa. It uses the gpt-4.0-mini model which keeps costs down.
 
 ## How It Works
 
