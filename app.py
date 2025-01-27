@@ -179,6 +179,54 @@ def reset_conversation():
     logger.debug("Conversation history has been reset.")
     return jsonify({'result': 'Conversation history reset successfully'})
 
+@app.route('/api/pronounce', methods=['POST'])
+def pronounce():
+    # Get the word from the request
+    data = request.json
+    word = data.get('word', '').strip()
+
+    if not word:
+        logger.debug("Received empty word for pronunciation.")
+        return jsonify({'error': 'Missing or empty word in request'}), 400
+
+    try:
+        # Step 1: Translate the word to Spanish if necessary
+        translation_prompt = [
+            {"role": "system", "content": "You are a translator proficient in Spanish."},
+            {"role": "user", "content": f"Translate the word '{word}' to Spanish. If it's already Spanish, return it unchanged."}
+        ]
+        translation_response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=translation_prompt,
+            max_tokens=200, 
+            temperature=0.7
+        )
+        translated_word = translation_response.choices[0].message['content'].strip()
+
+        logger.debug(f"Translated word: {translated_word}")
+
+        # Step 2: Generate the Spanish pronunciation using OpenAI TTS
+        tts_response = openai.Audio.speech.create(
+            model="tts-1",  # Choose the appropriate model (e.g., `tts-1` or `tts-1-hd`)
+            voice="nova",  # Use a Spanish-friendly voice
+            input=translated_word,
+        )
+
+        # Get the MP3 audio content
+        audio_content = tts_response["audio"]
+
+        logger.debug("Generated audio content successfully.")
+
+        # Return the original word, translation, and audio as a response
+        return jsonify({
+            "original_word": word,
+            "translated_word": translated_word,
+            "audio": audio_content
+        })
+    except Exception as e:
+        logger.error(f"Error generating text-to-speech: {str(e)}")
+        return jsonify({'error': 'Failed to generate pronunciation', 'details': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
