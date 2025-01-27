@@ -40,7 +40,7 @@ def assist():
     text = data.get('text', '')
     messages = [
         {"role": "system", "content": "You are a helpful assistant proficient in correcting Spanish text."},
-        {"role": "user", "content": f"Correct the following Spanish text and explain any mistakes:\n\n{text}"}
+        {"role": "user", "content": f"Correct the following Spanish text, consider any cultural or situational nuances and explain any mistakes:\n\n{text}"}
     ]
     response = openai.ChatCompletion.create(
         model='gpt-4o-mini',
@@ -113,23 +113,6 @@ def define():
     )
     return jsonify({'result': response.choices[0].message['content'].strip()})
 
-# Handles the Popup box Modal questions
-# @app.route('/api/question', methods=['POST'])
-# def question():
-#     data = request.json
-#     query = data.get('query', '')
-#     messages = [
-#         {"role": "system", "content": "You are a helpful assistant for Spanish language learning. Consider cultural and situational nuances while assisting."},
-#         {"role": "user", "content": query}
-#     ]
-#     response = openai.ChatCompletion.create(
-#         model='gpt-4o-mini',
-#         messages=messages,
-#         max_tokens=500,
-#         temperature=0.7,
-#     )
-#     return jsonify({'result': response.choices[0].message['content'].strip()})
-
 
 # Handles the Chat Window Feature w/ History 
 SYSTEM_PROMPT = {
@@ -201,36 +184,3 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
 
 
-
-
-# @app.route('/api/translate_to_spanish', methods=['POST'])
-# def translate_to_spanish():
-#     data = request.json
-#     text = data.get('text', '')
-#     messages = [
-#         {"role": "system", "content": "You are a helpful assistant proficient in translating English to Spanish."},
-#         {"role": "user", "content": f"Translate the following English text to Spanish, considering cultural context:\n\n{text}"}
-#     ]
-#     response = openai.ChatCompletion.create(
-#         model='gpt-4o-mini',
-#         messages=messages,
-#         max_tokens=900,
-#         temperature=0.7,
-#     )
-#     return jsonify({'result': response.choices[0].message['content'].strip()})
-
-# @app.route('/api/translate_to_english', methods=['POST'])
-# def translate_to_english():
-#     data = request.json
-#     text = data.get('text', '')
-#     messages = [
-#         {"role": "system", "content": "You are a helpful assistant proficient in translating Spanish to English."},
-#         {"role": "user", "content": f"Translate the following Spanish text to English, considering cultural context:\n\n{text}"}
-#     ]
-#     response = openai.ChatCompletion.create(
-#         model='gpt-4o-mini',
-#         messages=messages,
-#         max_tokens=900,
-#         temperature=0.7,
-#     )
-#     return jsonify({'result': response.choices[0].message['content'].strip()})
