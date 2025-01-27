@@ -1,4 +1,5 @@
-# Fluent Front Backend API
+# Polyglot Backend API
+**Note:** *supports Fluent-Front Frontend React App*
 
 ## Purpose
 This FastAPI Backend is running on `192.168.1.214/250` as **polyglot-back**. Overall this application leverages OpenAI API to perform functions related to Learning Spanish for translation services and overall coaching and assessment. It uses the gpt-4.0-mini model which keeps costs down.
