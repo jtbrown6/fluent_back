@@ -7,6 +7,10 @@ from dotenv import load_dotenv
 import logging
 import re
 import threading
+from io import BytesIO
+import base64
+from pathlib import Path
+import requests
 
 load_dotenv()
 
@@ -179,9 +183,10 @@ def reset_conversation():
     logger.debug("Conversation history has been reset.")
     return jsonify({'result': 'Conversation history reset successfully'})
 
+
 @app.route('/api/pronounce', methods=['POST'])
 def pronounce():
-    # Get the word from the request
+    # Get the word from the request that's highlighted
     data = request.json
     word = data.get('word', '').strip()
 
@@ -190,30 +195,61 @@ def pronounce():
         return jsonify({'error': 'Missing or empty word in request'}), 400
 
     try:
-        # Step 1: Translate the word to Spanish if necessary
+        # Parte Uno: translate the word to Spanish if necessary
         translation_prompt = [
             {"role": "system", "content": "You are a translator proficient in Spanish."},
-            {"role": "user", "content": f"Translate the word '{word}' to Spanish. If it's already Spanish, return it unchanged."}
+            {"role": "user", "content": f"Translate the word '{word}' to Spanish. If it's already Spanish, return it unchanged, but ONLY provide the translated word, do not mention that the word is in spanish or not."}
         ]
         translation_response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
+            model="gpt-4o-mini", 
             messages=translation_prompt,
-            max_tokens=200, 
-            temperature=0.7
+            max_tokens=500, 
+            temperature=0.3,
         )
         translated_word = translation_response.choices[0].message['content'].strip()
 
         logger.debug(f"Translated word: {translated_word}")
 
-        # Step 2: Generate the Spanish pronunciation using OpenAI TTS
-        tts_response = openai.Audio.speech.create(
-            model="tts-1",  # Choose the appropriate model (e.g., `tts-1` or `tts-1-hd`)
-            voice="nova",  # Use a Spanish-friendly voice
-            input=translated_word,
+        # generate the espanol pronunciation using text to speech openai api
+        # temp file to store the audio locally
+        temp_file = Path("temp_speech.mp3")
+        
+        
+        headers = {
+            "Authorization": f"Bearer {openai.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Add a pause and slow down the speech
+        tts_data = {
+            "model": "tts-1",
+            "voice": "nova",
+            "input": f"{translated_word}",  # extra dots for pausing a little bit
+            "speed": 0.95  
+        }
+        
+        response = requests.post(
+            "https://api.openai.com/v1/audio/speech",
+            headers=headers,
+            json=tts_data,
+            stream=True
         )
-
-        # Get the MP3 audio content
-        audio_content = tts_response["audio"]
+        
+        if response.status_code != 200:
+            raise Exception(f"TTS API error: {response.text}")
+            
+        # Stream to file
+        with open(temp_file, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+        
+        # Read the file and convert to base64
+        with open(temp_file, "rb") as audio_file:
+            audio_content = base64.b64encode(audio_file.read()).decode('utf-8')
+            
+        # Clean up the temporary file
+        temp_file.unlink()
 
         logger.debug("Generated audio content successfully.")
 
@@ -226,6 +262,55 @@ def pronounce():
     except Exception as e:
         logger.error(f"Error generating text-to-speech: {str(e)}")
         return jsonify({'error': 'Failed to generate pronunciation', 'details': str(e)}), 500
+
+
+# @app.route('/api/pronounce/original', methods=['POST'])
+# def pronounce():
+#     # Get the word from the request
+#     data = request.json
+#     word = data.get('word', '').strip()
+
+#     if not word:
+#         logger.debug("Received empty word for pronunciation.")
+#         return jsonify({'error': 'Missing or empty word in request'}), 400
+
+#     try:
+#         # Step 1: Translate the word to Spanish if necessary
+#         translation_prompt = [
+#             {"role": "system", "content": "You are a translator proficient in Spanish."},
+#             {"role": "user", "content": f"Translate the word '{word}' to Spanish. If it's already Spanish, return it unchanged."}
+#         ]
+#         translation_response = openai.ChatCompletion.create(
+#             model="gpt-4o-mini",
+#             messages=translation_prompt,
+#             max_tokens=200, 
+#             temperature=0.7
+#         )
+#         translated_word = translation_response.choices[0].message['content'].strip()
+
+#         logger.debug(f"Translated word: {translated_word}")
+
+#         # Step 2: Generate the Spanish pronunciation using OpenAI TTS
+#         tts_response = openai.Audio.speech.create(
+#             model="tts-1",  # Choose the appropriate model (e.g., `tts-1` or `tts-1-hd`)
+#             voice="nova",  # Use a Spanish-friendly voice
+#             input=translated_word,
+#         )
+
+#         # Get the MP3 audio content
+#         audio_content = tts_response["audio"]
+
+#         logger.debug("Generated audio content successfully.")
+
+#         # Return the original word, translation, and audio as a response
+#         return jsonify({
+#             "original_word": word,
+#             "translated_word": translated_word,
+#             "audio": audio_content
+#         })
+#     except Exception as e:
+#         logger.error(f"Error generating text-to-speech: {str(e)}")
+#         return jsonify({'error': 'Failed to generate pronunciation', 'details': str(e)}), 500
 
 
 if __name__ == '__main__':
